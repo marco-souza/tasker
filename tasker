@@ -1,0 +1,110 @@
+#! /usr/bin/env node
+
+// Imports
+let tasker = require(`commander`),
+    I18n = require(`./assets/utils`).I18n,
+    Logger = require(`./assets/utils`).Logger,
+    chalk = require(`chalk`),
+    moment = require(`moment`),
+    fs = require(`fs`);
+
+// Initial Definitions
+moment.locale(`pt-br`);
+let file = `./data/tasks.json`,
+    i18n = new I18n(`pt-br`);
+
+
+// Parser Functions
+function getTaskObj(val) {
+    let taskInfo =  val.split(`,`),
+        taskObj = {};
+
+    taskObj.type = `default`;
+
+    if (taskInfo.length === 1) {
+        cmd = taskInfo[0].split(`:`);
+        taskObj.message = (cmd.length === 1) ? taskInfo[0] : cmd[1];
+        return taskObj;
+    }
+
+    for (i of taskInfo) {
+        let data = i.split(`:`);
+        switch(data[0]) {
+            case `d`:
+                taskObj[`date`] = moment(data[1]).format(`LL`);
+                break;
+            case `e`:
+                taskObj[`timebox`] = data[1];
+                break;
+            case `m`:
+                taskObj[`message`] = data[1];
+                break;
+            case `t`:
+                taskObj[`type`] = data[1];
+                break;
+        }
+    }
+
+    return taskObj;
+}
+
+
+// Definition CLI commands
+tasker
+    .version(`0.0.1`)
+    .option(`-c, --create [obj]`, `Create a task`, getTaskObj)
+    .option(`-l, --list [type]`, `List all tasks`)
+    .parse(process.argv);
+
+
+// Create Task
+if(tasker.create) {
+    let logger = new Logger("createTask");
+    if (tasker.create != true) {
+        let task = tasker.create, tasks = [];
+
+        // If file exists, load file.
+        if(fs.existsSync(file)) {
+            tasks = JSON.parse(fs.readFileSync(file, `utf8`));
+        }
+
+        tasks.push(task);
+
+        // Write on file
+        fs.writeFile(file, JSON.stringify(tasks, undefined, 4), console.log);
+
+        logger.info(i18n.translate(`_TASK_ADD_SUCCESS_`));
+
+    }else{
+        logger.info(i18n.translate(`_NO_TASK_`), `danger`);
+    }
+}
+
+
+// List all Tasks
+if(tasker.list) {
+
+    let logger = new Logger("createTask");
+
+    let title = i18n.translate(`_LIST_TASKS_`);
+    let header = Array(title.length).join(`=`);
+    console.log(chalk.blue(`${header}\n${title}\n${header}\n`));
+
+    if (fs.existsSync(file)) {
+        let tasks = JSON.parse(fs.readFileSync(file, `utf8`));
+
+        for (task of tasks) {
+            item = chalk.red("\t-");
+            item += (task.type) ? chalk.blue.bold(` @${task.type}\t`) : "";
+            item += chalk.yellow(`${task.message}`);
+            item += (task.timebox) ? chalk.blue(` [${task.timebox}]`) : "";
+            item += (task.date) ? chalk.magenta(` (${task.date})`) : "";
+            // item += "\n";
+
+            console.log(item);
+
+        }
+        console.log("\n");
+    }else
+        console.log(i18n.translate(`_TASK_TYPE_NOT_EXISTS_`))
+}
