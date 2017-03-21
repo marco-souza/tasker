@@ -4,6 +4,7 @@
 let tasker = require(`commander`),
     I18n = require(`./assets/utils`).I18n,
     Logger = require(`./assets/utils`).Logger,
+    _ = require(`lodash`),
     chalk = require(`chalk`),
     moment = require(`moment`),
     fs = require(`fs`);
@@ -91,8 +92,15 @@ if(tasker.list) {
     console.log(chalk.blue(`${header}\n${title}\n${header}\n`));
 
     if (fs.existsSync(file)) {
+        // Load task from file
         let tasks = JSON.parse(fs.readFileSync(file, `utf8`));
 
+        // Filter by tag
+        if (tasker.list !== true) {
+            tasks = _.filter(tasks, t => t.type === tasker.list);
+        }
+
+        // Show each task
         for (task of tasks) {
             item = chalk.red("\t-");
             item += (task.type) ? chalk.blue.bold(` @${task.type}\t`) : "";
@@ -106,5 +114,5 @@ if(tasker.list) {
         }
         console.log("\n");
     }else
-        console.log(i18n.translate(`_TASK_TYPE_NOT_EXISTS_`))
+        console.log(i18n.translate(`_FILE_NOT_EXISTS_`))
 }
