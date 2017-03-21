@@ -12,8 +12,8 @@ let tasker = require(`commander`),
 
 // Initial Definitions
 moment.locale(`pt-br`);
-let file = `./data/tasks.json`,
-    fileDone = `./data/tasks_done.json`,
+let file = `${__dirname}/data/tasks.json`,
+    fileDone = `${__dirname}/data/tasks_done.json`,
     i18n = new I18n(`pt-br`);
 
 
@@ -120,7 +120,7 @@ if(tasker.list) {
         for (task of tasks) {
             item = chalk.red("\t- ");
             item += (task.id) ? chalk.gray(`${task.id.split("").slice(0,6).join("")}  `) : "";
-            item += (task.type) ? chalk.blue.bold(`@${task.type}\t\t`) : "";
+            item += (task.type) ? chalk.blue.bold(`@${task.type}\t  `) : "";
             item += chalk.yellow(`${task.message}`);
             item += (task.timebox) ? chalk.blue(` [${task.timebox}]`) : "";
             item += (task.date) ? chalk.magenta(` (${
