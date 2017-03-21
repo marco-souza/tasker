@@ -1,5 +1,3 @@
 # TODO
 
-* Remover tarefa
-* Concluir tarefa
-* Filtro por `type`
+* Informe if tag searched have 0 results

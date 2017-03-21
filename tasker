@@ -7,11 +7,13 @@ let tasker = require(`commander`),
     _ = require(`lodash`),
     chalk = require(`chalk`),
     moment = require(`moment`),
+    crypto = require(`crypto`),
     fs = require(`fs`);
 
 // Initial Definitions
 moment.locale(`pt-br`);
 let file = `./data/tasks.json`,
+    fileDone = `./data/tasks_done.json`,
     i18n = new I18n(`pt-br`);
 
 
@@ -25,26 +27,31 @@ function getTaskObj(val) {
     if (taskInfo.length === 1) {
         cmd = taskInfo[0].split(`:`);
         taskObj.message = (cmd.length === 1) ? taskInfo[0] : cmd[1];
-        return taskObj;
-    }
-
-    for (i of taskInfo) {
-        let data = i.split(`:`);
-        switch(data[0]) {
-            case `d`:
-                taskObj[`date`] = moment(data[1]).format(`LL`);
-                break;
-            case `e`:
-                taskObj[`timebox`] = data[1];
-                break;
-            case `m`:
-                taskObj[`message`] = data[1];
-                break;
-            case `t`:
-                taskObj[`type`] = data[1];
-                break;
+    }else {
+        for (i of taskInfo) {
+            let data = i.split(`:`);
+            switch(data[0]) {
+                case `d`:
+                    taskObj[`date`] = moment(data[1]).format(`LL`);
+                    break;
+                case `e`:
+                    taskObj[`timebox`] = data[1];
+                    break;
+                case `m`:
+                    taskObj[`message`] = data[1];
+                    break;
+                case `t`:
+                    taskObj[`type`] = data[1];
+                    break;
+            }
         }
     }
+
+    // Generate hash for id
+    sha1 = crypto.createHash("sha1");
+    sha1.update(taskObj.type + taskObj.message);
+
+    taskObj.id = sha1.digest("HEX");
 
     return taskObj;
 }
@@ -55,7 +62,9 @@ tasker
     .version(`0.0.1`)
     .option(`-c, --create [obj]`, `Create a task`, getTaskObj)
     .option(`-l, --list [type]`, `List all tasks`)
+    .option(`-d, --done [hash]`, `Complete or delete a task`)
     .parse(process.argv);
+
 
 
 // Create Task
@@ -67,6 +76,12 @@ if(tasker.create) {
         // If file exists, load file.
         if(fs.existsSync(file)) {
             tasks = JSON.parse(fs.readFileSync(file, `utf8`));
+        }
+
+        // Check if task is repeated
+        if (_.find(tasks, v => v.id === task.id)) {
+            logger.info(i18n.translate(`_TASK_EXISTS_`));
+            return;
         }
 
         tasks.push(task);
@@ -87,9 +102,10 @@ if(tasker.list) {
 
     let logger = new Logger("createTask");
 
-    let title = i18n.translate(`_LIST_TASKS_`);
-    let header = Array(title.length).join(`=`);
-    console.log(chalk.blue(`${header}\n${title}\n${header}\n`));
+    let today = moment(Date.now()).format("LL"),
+        // title = today + i18n.translate(`_LIST_TASKS_`),
+        header = Array(today.length+5).join(`=`);
+    console.log(chalk.blue(`${header}\n| ${today} |\n${header}\n`));
 
     if (fs.existsSync(file)) {
         // Load task from file
@@ -102,12 +118,16 @@ if(tasker.list) {
 
         // Show each task
         for (task of tasks) {
-            item = chalk.red("\t-");
-            item += (task.type) ? chalk.blue.bold(` @${task.type}\t`) : "";
+            item = chalk.red("\t- ");
+            item += (task.id) ? chalk.gray(`${task.id.split("").slice(0,6).join("")}  `) : "";
+            item += (task.type) ? chalk.blue.bold(`@${task.type}\t\t`) : "";
             item += chalk.yellow(`${task.message}`);
             item += (task.timebox) ? chalk.blue(` [${task.timebox}]`) : "";
-            item += (task.date) ? chalk.magenta(` (${task.date})`) : "";
-            // item += "\n";
+            item += (task.date) ? chalk.magenta(` (${
+                (task.date == today) ?
+                chalk.red(i18n.translate(`_TODAY_`)) :
+                task.date
+            })`) : "";
 
             console.log(item);
 
@@ -115,4 +135,49 @@ if(tasker.list) {
         console.log("\n");
     }else
         console.log(i18n.translate(`_FILE_NOT_EXISTS_`))
+}
+
+
+// Complete task
+if(tasker.done) {
+
+    let logger = new Logger("doneTask");
+
+    if (tasker.done == true) {
+        console.log(i18n.translate(`_MISSING_ID_`, `danger`));
+        return;
+    }
+
+    // If file exists, load file.
+    let tasks,
+        task_id = tasker.done;
+    if(fs.existsSync(file)) {
+        tasks = JSON.parse(fs.readFileSync(file, `utf8`));
+    }else{
+        console.log(i18n.translate(`_FILE_NOT_EXISTS_`), `danger`);
+        return;
+    }
+
+    let taskDone =      _.find(tasks, v => v.id.split("").slice(0,6).join("") === task_id),
+        tasksChanged =  _.filter(tasks, v => v.id.split("").slice(0,6).join("") !== task_id);
+
+    if (taskDone) {
+        // Write on file
+        fs.writeFile(file, JSON.stringify(tasksChanged, undefined, 4), console.log);
+
+        // Write on fileDone
+        let tasksDone = [];
+        if(fs.existsSync(fileDone)) {
+            tasksDone = JSON.parse(fs.readFileSync(fileDone, `utf8`))
+        }
+        tasksDone.push(taskDone);
+        fs.writeFile(fileDone, JSON.stringify(tasksDone, undefined, 4), console.log);
+    }else{
+        logger.info(i18n.translate(`_TASK_NOT_FIND_`), `danger`);
+        return;
+    }
+
+
+    logger.info(i18n.translate(`_TASK_DONE_`));
+
 }

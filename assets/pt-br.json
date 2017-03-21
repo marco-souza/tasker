@@ -2,6 +2,11 @@
     "_TASK_ADD_SUCCESS_": "Tarefa adicionada com Sucesso!",
     "_TASK_TYPE_NOT_EXISTS_": "Tipo de tarefa não existe!",
     "_FILE_NOT_EXISTS_": "Arquivo de tarefas não existe!",
+    "_MISSING_ID_": "Informe o 'id' da tarefa concluida!",
     "_NO_TASK_": "Nenhuma tarefa foi passada!",
-    "_LIST_TASKS_": "Lista de tarefas: "
+    "_LIST_TASKS_": "Lista de tarefas: ",
+    "_TASK_DONE_": "Tarefa finalizada!",
+    "_TASK_EXISTS_": "Tarefa já existe!",
+    "_TODAY_": "Hoje",
+    "_TASK_NOT_FIND_": "Tarefa não encontrada!"
 }
